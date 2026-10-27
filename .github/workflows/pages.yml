@@ -55,3 +55,45 @@ jobs:
       - name: Опубликовать сайт
         id: deployment
         uses: actions/deploy-pages@v4
+
+  deploy-helios:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Скачать собранный сайт
+        uses: actions/download-artifact@v8
+        with:
+          name: github-pages
+          path: artifact/
+
+      - name: Распаковать сайт
+        run: |
+          mkdir -p site
+          tar -xf artifact/artifact.tar -C site
+          test -f site/index.html
+
+      - name: Настроить SSH
+        env:
+          SSH_KEY: ${{ secrets.HELIOS_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.HELIOS_KNOWN_HOSTS }}
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/helios_deploy
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/helios_deploy ~/.ssh/known_hosts
+
+      - name: Загрузить сайт на Helios
+        run: |
+          rsync -rtz \
+            --chmod=D755,F644 \
+            --rsync-path=/usr/local/bin/rsync \
+            -e "ssh -p 2222 -i $HOME/.ssh/helios_deploy -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=30" \
+            site/ \
+            s334574@helios.cs.ifmo.ru:/home/studs/s334574/public_html/
+
+      - name: Удалить временный ключ с раннера
+        if: always()
+        run: rm -f ~/.ssh/helios_deploy
