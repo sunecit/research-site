@@ -1,0 +1,14 @@
+site_name: Результаты исследования
+
+theme:
+  name: material
+  language: ru
+
+nav:
+  - Главная: index.md
+
+plugins:
+  - search:
+      lang:
+        - ru
+        - en

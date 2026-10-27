@@ -1,0 +1,20 @@
+# Виртуальные окружения
+.venv/
+.venv-homebrew-backup/
+
+# Результаты сборки
+site/
+_build/
+
+# Кэш Python и инструментов
+__pycache__/
+*.py[cod]
+.cache/
+.pytest_cache/
+
+# Локальные настройки и секреты
+.env
+.env.*
+
+# Служебные файлы macOS
+.DS_Store
