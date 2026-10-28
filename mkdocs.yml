@@ -5,12 +5,26 @@ use_directory_urls: true
 theme:
   name: material
   language: ru
+  font: false
 
 nav:
   - Главная: index.md
+  - Проверка формул: math-check.md
 
 plugins:
   - search:
       lang:
         - ru
         - en
+
+markdown_extensions:
+  - pymdownx.arithmatex:
+      generic: true
+
+extra_css:
+  - assets/vendor/katex/katex.min.css
+
+extra_javascript:
+  - assets/vendor/katex/katex.min.js
+  - assets/vendor/katex/auto-render.min.js
+  - javascripts/math.js
