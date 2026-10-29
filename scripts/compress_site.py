@@ -7,8 +7,8 @@ import json
 import platform
 import zlib
 
-VERSION = "v1.0"
-LEVEL = 1
+VERSION = "v1.1"
+LEVEL = 9
 REPEATS = 11
 
 project = Path(__file__).resolve().parent.parent
