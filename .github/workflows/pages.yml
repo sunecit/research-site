@@ -1,10 +1,10 @@
 name: Publish MkDocs site
 
-# Запуск при отправке изменений в main или вручную.
+# Запуск при отправке тега версии, например v1.0 или v1.1.
 on:
   push:
-    branches: [main]
-  workflow_dispatch:
+    tags:
+      - 'v*'
 
 permissions:
   contents: read
@@ -17,9 +17,14 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
     steps:
-      - name: Скачать исходники
+      - name: Скачать исходники и историю выпусков
         uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
 
       - name: Установить Python
         uses: actions/setup-python@v7
@@ -33,29 +38,72 @@ jobs:
       - name: Проверить зависимости
         run: python -m pip check
 
-      - name: Собрать сайт со строгой проверкой
-        run: mkdocs build --strict
+      - name: Настроить автора автоматических коммитов
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-      - name: Сохранить собранный сайт
+      - name: Подготовить версии для обеих площадок
+        env:
+          VERSION: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+
+          if [[ ! "$VERSION" =~ ^v[0-9]+\.[0-9]+$ ]]; then
+            echo "Ожидается тег вида v1.0 или v1.1"
+            exit 1
+          fi
+
+          printf '%s\n' "$GITHUB_SHA" > docs/release-commit.txt
+
+          for branch in gh-pages helios-pages; do
+            if [ "$branch" = "gh-pages" ]; then
+              export SITE_URL="https://sunecit.github.io/research-site/"
+            else
+              export SITE_URL="https://se.ifmo.ru/~s334574/"
+            fi
+
+            if git show-ref --verify --quiet "refs/remotes/origin/$branch"; then
+              git branch "$branch" "origin/$branch"
+            fi
+
+            # Существующий выпуск не заменяем другим коммитом.
+            if git cat-file -e "$branch:$VERSION/index.html" 2>/dev/null; then
+              saved_commit=$(git show "$branch:$VERSION/release-commit.txt")
+              if [ "$saved_commit" != "$GITHUB_SHA" ]; then
+                echo "Нельзя перезаписать существующий выпуск другим коммитом"
+                exit 1
+              fi
+              echo "$VERSION уже собрана из этого коммита"
+            else
+              # Сохраняем новый выпуск и обновляем указатель latest.
+              mike deploy --branch "$branch" \
+                --update-aliases --alias-type redirect \
+                "$VERSION" latest
+              mike set-default --branch "$branch" latest
+            fi
+
+            mkdir -p "$RUNNER_TEMP/$branch"
+            git archive "$branch" | tar -x -C "$RUNNER_TEMP/$branch"
+          done
+
+          git push --atomic origin gh-pages helios-pages
+
+      - name: Сохранить все версии для GitHub Pages
         uses: actions/upload-pages-artifact@v4
         with:
-          path: site/
+          path: ${{ runner.temp }}/gh-pages
 
-      - name: Собрать сайт для Helios
-        env:
-          SITE_URL: https://se.ifmo.ru/~s334574/
-        run: mkdocs build --strict
-
-      - name: Сохранить сборку для Helios
+      - name: Сохранить все версии для Helios
         uses: actions/upload-pages-artifact@v4
         with:
           name: helios-site
-          path: site/
+          path: ${{ runner.temp }}/helios-pages
 
   deploy:
     needs: build
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
+    if: startsWith(github.ref, 'refs/tags/v')
     permissions:
       pages: write
       id-token: write
@@ -71,7 +119,7 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    if: github.ref == 'refs/heads/main'
+    if: startsWith(github.ref, 'refs/tags/v')
 
     steps:
       - name: Скачать собранный сайт

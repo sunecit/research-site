@@ -1,6 +1,7 @@
 site_name: Результаты исследования
 site_url: !ENV [SITE_URL, "https://sunecit.github.io/research-site/"]
 use_directory_urls: true
+strict: true
 
 theme:
   name: material
