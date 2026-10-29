@@ -19,6 +19,10 @@ plugins:
       lang:
         - ru
         - en
+      pipeline:
+        - trimmer
+        - stopWordFilter
+        - stemmer
 
 markdown_extensions:
   - pymdownx.arithmatex:
@@ -35,3 +39,7 @@ extra_javascript:
 extra:
   version:
     provider: mike
+
+# Обработка словоформ в обычных поисковых запросах.
+hooks:
+  - scripts/search_stemming.py
