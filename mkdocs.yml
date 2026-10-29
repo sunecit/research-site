@@ -8,6 +8,7 @@ theme:
   font: false
 
 nav:
+  - Сжатие сайта: compression.md
   - Главная: index.md
   - Проверка формул: math-check.md
   - Лицензии: licenses.md
@@ -29,3 +30,7 @@ extra_javascript:
   - assets/vendor/katex/katex.min.js
   - assets/vendor/katex/auto-render.min.js
   - javascripts/math.js
+
+extra:
+  version:
+    provider: mike
